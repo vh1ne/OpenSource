@@ -90,6 +90,10 @@ public class XTotalPNL {
         }
     }
 
+    /**
+     * Copy  and pass Sensibull url with userid (generally value followed by /verified-pnl/ and run test
+     * check @XtotalPNLTest.java
+     */
     public static void calculateSummary(String publicURL) {
         var username = publicURL.replaceFirst("^https?://[^/]+/verified-pnl/", "").split("/")[0];
         var url = "https://api.sensibull.com/v1/positions_snapshots_list/" + username;
@@ -172,12 +176,10 @@ public class XTotalPNL {
                 totalProfitableDays.get(), totalLossDays.get());
 
     }
-/*
-* Copy Sensibull url with userid (generally value followed by /verified-pnl/ and run main method
-* */
-    public static void main(String[] args) {
+
+/*    public static void main(String[] args) {
         var publicURL = "https://web.sensibull.com/verified-pnl/smart-drone";
         calculateSummary(publicURL);
 
-    }
+    }*/
 }
