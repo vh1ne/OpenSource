@@ -172,7 +172,9 @@ public class XTotalPNL {
                 totalProfitableDays.get(), totalLossDays.get());
 
     }
-
+/*
+* Copy Sensibull url with userid (generally value followed by /verified-pnl/ and run main method
+* */
     public static void main(String[] args) {
         var publicURL = "https://web.sensibull.com/verified-pnl/smart-drone";
         calculateSummary(publicURL);
