@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.DayOfWeek;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -91,8 +92,9 @@ public class XTotalPNL {
     }
 
     /**
-     * Copy  and pass Sensibull url with userid (generally value followed by /verified-pnl/ and run test
-     * check @XtotalPNLTest.java
+     * Calculate and print the summary of PNL data.
+     * 
+     * @param publicURL the public URL to fetch PNL data
      */
     public static void calculateSummary(String publicURL) {
         var username = publicURL.replaceFirst("^https?://[^/]+/verified-pnl/", "").split("/")[0];
@@ -171,15 +173,65 @@ public class XTotalPNL {
         System.out.println("Summary for all years: for User: " + username);
         System.out.printf("Total Profit: ₹%s, Total Days: %d, Profitable: %d, Loss: %d%n",
                 String.format("%,.2f", allYearsStats.getSum()),
-                //  String.format("%,.2f", allYearsStats.getAverage()),
                 totalDays,
                 totalProfitableDays.get(), totalLossDays.get());
 
+        printAllDaysPNLInAscendingOrder(pnl);
+        printAggregateByDayOfWeek(pnl);
+        printDayOfMonthStatistics(pnl);
     }
 
-/*    public static void main(String[] args) {
-        var publicURL = "https://web.sensibull.com/verified-pnl/smart-drone";
-        calculateSummary(publicURL);
+    /**
+     * Print all days' PNL in ascending order.
+     * 
+     * @param pnl the PNL response data
+     */
+    public static void printAllDaysPNLInAscendingOrder(Response pnl) {
+        pnl.getData().getHistory().stream()
+                .sorted(Comparator.comparing(HistoryItem::getCreatedAt))
+                .forEach(item -> System.out.printf("Date: %s, Profit: %.2f%n", item.getCreatedAt(), item.getTotalProfit()));
+    }
 
-    }*/
+    /**
+     * Print aggregate PNL by day of the week.
+     * 
+     * @param pnl the PNL response data
+     */
+    public static void printAggregateByDayOfWeek(Response pnl) {
+        Map<DayOfWeek, DoubleSummaryStatistics> dayOfWeekStats = pnl.getData().getHistory().stream()
+                .collect(Collectors.groupingBy(
+                        item -> item.getCreatedAt().getDayOfWeek(),
+                        Collectors.summarizingDouble(HistoryItem::getTotalProfit)
+                ));
+
+        dayOfWeekStats.forEach((dayOfWeek, stats) -> {
+            System.out.printf("Day of Week: %s, Total Profit: %.2f, Average Profit: %.2f, Count: %d%n",
+                    dayOfWeek, stats.getSum(), stats.getAverage(), stats.getCount());
+        });
+    }
+
+    /**
+     * Print statistics for the day of the month with the most profit and the most loss.
+     * 
+     * @param pnl the PNL response data
+     */
+    public static void printDayOfMonthStatistics(Response pnl) {
+        Map<Integer, DoubleSummaryStatistics> dayOfMonthStats = pnl.getData().getHistory().stream()
+                .collect(Collectors.groupingBy(
+                        item -> item.getCreatedAt().getDayOfMonth(),
+                        Collectors.summarizingDouble(HistoryItem::getTotalProfit)
+                ));
+
+        Optional<Map.Entry<Integer, DoubleSummaryStatistics>> maxProfitDay = dayOfMonthStats.entrySet().stream()
+                .max(Comparator.comparingDouble(entry -> entry.getValue().getSum()));
+
+        Optional<Map.Entry<Integer, DoubleSummaryStatistics>> maxLossDay = dayOfMonthStats.entrySet().stream()
+                .min(Comparator.comparingDouble(entry -> entry.getValue().getSum()));
+
+        maxProfitDay.ifPresent(entry -> System.out.printf("Day of Month with Most Profit: %d, Total Profit: %.2f%n",
+                entry.getKey(), entry.getValue().getSum()));
+
+        maxLossDay.ifPresent(entry -> System.out.printf("Day of Month with Most Loss: %d, Total Loss: %.2f%n",
+                entry.getKey(), entry.getValue().getSum()));
+    }
 }
